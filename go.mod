@@ -138,4 +138,3 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace go.fuhry.dev/runtime v0.0.0+incompatible => ../../../../code/go.fuhry.dev/runtime
