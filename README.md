@@ -60,8 +60,21 @@ An AAAA record is filtered out of the answer if:
 In practice, most clients don't use `ANY` queries, nor do many servers support them, so `no6` will spend most of its
 time just stripping out addresses from `AAAA` responses.
 
+## Quick start: how to end the reCAPTCHA/youtube pain
+
+```
+no6 {
+        .google.com
+        .gstatic.com
+        .googleapis.com
+        .googletagmanager.com
+        .googlevideo.com
+        .youtube.com
+}
+```
+
 # Author/Contact
 
 Dan Fuhry <dan@fuhry.com>
 
-&copy; 2024. Relased under the Apache 2.0 License; see the [LICENSE](LICENSE) file for details.
+&copy; 2024. Released under the Apache 2.0 License; see the [LICENSE](LICENSE) file for details.
