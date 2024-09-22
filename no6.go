@@ -19,7 +19,7 @@ import (
 
 var log = clog.NewWithPlugin("no6")
 
-var regexpValidDomain = regexp.MustCompile(`^\.?[a-z0-9-]+(\.[a-z0-9]+)*$`)
+var regexpValidDomain = regexp.MustCompile(`^\.?[a-z0-9-]+(\.[a-z0-9-]+)*$`)
 
 func init() {
 	plugin.Register("no6", setup)

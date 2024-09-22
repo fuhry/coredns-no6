@@ -36,6 +36,13 @@ func TestNo6Parse(t *testing.T) {
 			`no6 example.com .example.com`,
 			false, []string{".example.com", "example.com"},
 		},
+		{
+			`no6 {
+				apiproxy-website-nlb-prod-1-5a4080be4d9bee00.elb.us-east-1.amazonaws.com
+			}
+`,
+			false, []string{"apiproxy-website-nlb-prod-1-5a4080be4d9bee00.elb.us-east-1.amazonaws.com"},
+		},
 	}
 
 	for i, test := range tests {
