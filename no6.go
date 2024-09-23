@@ -19,7 +19,7 @@ import (
 
 var log = clog.NewWithPlugin("no6")
 
-var regexpValidDomain = regexp.MustCompile(`^\.?[a-z0-9-]+(\.[a-z0-9-]+)*$`)
+var regexpValidDomain = regexp.MustCompile(`^\??\.?[a-z0-9-]+(\.[a-z0-9-]+)*$`)
 
 func init() {
 	plugin.Register("no6", setup)
@@ -97,6 +97,37 @@ func (s *No6) addDomain(v string) error {
 	return nil
 }
 
+func (s *No6) shouldFilterQuestion(q dns.Question) bool {
+	trimmedName := strings.TrimSuffix(q.Name, ".")
+
+	if s.domains.Contains("?" + trimmedName) {
+		return true
+	}
+
+	for _, domain := range s.domains.AsSlice() {
+		if strings.HasPrefix(domain, "?.") && strings.HasSuffix(trimmedName, domain[1:]) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *No6) shouldFilterAnswer(msg dns.RR) bool {
+	trimmedName := strings.TrimSuffix(msg.Header().Name, ".")
+	if s.domains.Contains(trimmedName) {
+		return true
+	}
+
+	for _, domain := range s.domains.AsSlice() {
+		if len(domain) >= 1 && domain[0] == '.' && strings.HasSuffix(trimmedName, domain) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (s *No6) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	nw := nonwriter.New(w)
 	rcode, err := plugin.NextOrFailure(s.Name(), s.Next, ctx, nw, r)
@@ -112,11 +143,12 @@ func (s *No6) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 		return dns.RcodeServerFailure, fmt.Errorf("no answer received")
 	}
 
-	var v4, v6, questionAAAA bool
+	var v4, v6, questionAAAA, filterQuestion bool
 
 	for _, q := range r.Question {
 		if q.Qtype == dns.TypeAAAA {
 			questionAAAA = true
+			filterQuestion = filterQuestion || s.shouldFilterQuestion(q)
 			break
 		}
 	}
@@ -124,23 +156,10 @@ func (s *No6) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 	if rcode == dns.RcodeSuccess {
 		var remove sort.IntSlice
 		for i, ans := range r.Answer {
-			if aaaa, ok := ans.(*dns.AAAA); ok {
+			if _, ok := ans.(*dns.AAAA); ok {
 				v6 = true
-				filter := false
-				trimmedName := strings.TrimSuffix(aaaa.Header().Name, ".")
-				if s.domains.Contains(trimmedName) {
-					filter = true
-				}
-				if !filter {
-					for _, domain := range s.domains.AsSlice() {
-						if len(domain) >= 1 && domain[0] == '.' && strings.HasSuffix(trimmedName, domain) {
-							filter = true
-							break
-						}
-					}
-				}
 
-				if filter {
+				if filterQuestion || s.shouldFilterAnswer(ans) {
 					remove = append(remove, i)
 				}
 			} else if _, ok := ans.(*dns.A); ok {

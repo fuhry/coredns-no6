@@ -43,6 +43,14 @@ func TestNo6Parse(t *testing.T) {
 `,
 			false, []string{"apiproxy-website-nlb-prod-1-5a4080be4d9bee00.elb.us-east-1.amazonaws.com"},
 		},
+		{
+			`no6 {
+				?.test.com
+				?test.com
+			}
+`,
+			false, []string{"?.test.com", "?test.com"},
+		},
 	}
 
 	for i, test := range tests {
@@ -77,13 +85,14 @@ func TestNo6Parse(t *testing.T) {
 
 func TestNo6Response(t *testing.T) {
 	no6 := New()
-	no6.domains.Add("six.example.com", ".ds.example.com")
+	no6.domains.Add("six.example.com", ".ds.example.com", "?.question.com", "?q.com")
 	no6.Next = &mockHandler{}
 
 	testCases := []test.Case{
 		// Answer = what we expect from no6
 		// Extra = what the mock returns
 		{
+			// ensure A queries/answers are not modified
 			Qname: "four.example.com.",
 			Qtype: dns.TypeA,
 			Rcode: dns.RcodeSuccess,
@@ -95,6 +104,7 @@ func TestNo6Response(t *testing.T) {
 			},
 		},
 		{
+			// ensure absolute entries are properly matched
 			Qname:  "six.example.com.",
 			Qtype:  dns.TypeAAAA,
 			Rcode:  dns.RcodeSuccess,
@@ -104,6 +114,7 @@ func TestNo6Response(t *testing.T) {
 			},
 		},
 		{
+			// ensure absolute entries do not filter A record responses
 			Qname: "six.example.com.",
 			Qtype: dns.TypeA,
 			Rcode: dns.RcodeSuccess,
@@ -115,6 +126,7 @@ func TestNo6Response(t *testing.T) {
 			},
 		},
 		{
+			// ensure absolute entries with ANY queries filter out only AAAA responses
 			Qname: "six.example.com.",
 			Qtype: dns.TypeANY,
 			Rcode: dns.RcodeSuccess,
@@ -127,6 +139,7 @@ func TestNo6Response(t *testing.T) {
 			},
 		},
 		{
+			// ensure suffix-entries work
 			Qname:  "sub.ds.example.com.",
 			Qtype:  dns.TypeAAAA,
 			Rcode:  dns.RcodeSuccess,
@@ -136,6 +149,7 @@ func TestNo6Response(t *testing.T) {
 			},
 		},
 		{
+			// ensure multiple AAAA records are removed from an ANY response
 			Qname: "sub.ds.example.com.",
 			Qtype: dns.TypeANY,
 			Rcode: dns.RcodeSuccess,
@@ -149,6 +163,47 @@ func TestNo6Response(t *testing.T) {
 				test.AAAA("sub.ds.example.com. 60 IN AAAA fe80::2"),
 				test.AAAA("sub.ds.example.com. 60 IN AAAA ::3"),
 				test.A("sub.ds.example.com. 60 IN A 127.0.0.2"),
+			},
+		},
+		{
+			// ensure question suffix-entries are properly matched
+			Qname: "sub.ds.question.com.",
+			Qtype: dns.TypeAAAA,
+			Rcode: dns.RcodeSuccess,
+			Answer: []dns.RR{
+				test.CNAME("sub.ds.question.com. 60 IN CNAME sub.ds.example.com."),
+			},
+			Extra: []dns.RR{
+				test.CNAME("sub.ds.question.com. 60 IN CNAME sub.ds.example.com."),
+				test.AAAA("sub.ds.example.com. 60 IN AAAA ::1"),
+			},
+		},
+		{
+			// ensure question absolute-entries are properly matched (negative case)
+			Qname: "question.com.",
+			Qtype: dns.TypeAAAA,
+			Rcode: dns.RcodeSuccess,
+			Answer: []dns.RR{
+				// NOTE: order switched because SortAndCheck is used below
+				test.AAAA("absolute.answer.com. 60 IN AAAA ::1"),
+				test.CNAME("question.com. 60 IN CNAME absolute.answer.com."),
+			},
+			Extra: []dns.RR{
+				test.CNAME("question.com. 60 IN CNAME absolute.answer.com."),
+				test.AAAA("absolute.answer.com. 60 IN AAAA ::1"),
+			},
+		},
+		{
+			// ensure question absolute-entries are properly matched (positive case)
+			Qname: "q.com.",
+			Qtype: dns.TypeAAAA,
+			Rcode: dns.RcodeSuccess,
+			Answer: []dns.RR{
+				test.CNAME("q.com. 60 IN CNAME a.com."),
+			},
+			Extra: []dns.RR{
+				test.CNAME("q.com. 60 IN CNAME a.com."),
+				test.AAAA("a.com. 60 IN AAAA ::1"),
 			},
 		},
 	}

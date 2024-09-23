@@ -47,13 +47,16 @@ To block the apex domain, you'll need to use a separate entry.
 
 ## Technical details
 
-`no6` matches on names in the answer, not in the question. So, if your blocklist contains `example.com` but a query for
-`example.com` returns an answer for `othersite.com` (due to a CNAME, etc.), that answer won't be filtered.
+By default, `no6` matches on names in the answer, not in the question. To match on names in the question, prefix a rule
+with `?`.
+
+So, if your blocklist contains `example.com` but a query for `example.com` returns an answer for `othersite.com` (due to 
+a CNAME, etc.), that answer won't be filtered. Add the rule `?example.com` to match these transactions.
 
 An AAAA record is filtered out of the answer if:
 
 1. The rcode is `NOERROR`; and
-2. The record's name matches the domain allowlist; and either:
+2. The question or response matches the filtered domain list; and either:
   * The question type is `AAAA`; or
   * The question type is `ANY` _and_ the response contains at least one `A` record answer
 
