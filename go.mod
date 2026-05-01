@@ -1,10 +1,11 @@
 module github.com/fuhry/coredns-no6
 
-go 1.23.0
+go 1.26.2
 
 require (
 	github.com/coredns/caddy v1.1.1
 	github.com/coredns/coredns v1.11.3
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/miekg/dns v1.1.62
 )
 
@@ -27,6 +28,7 @@ require (
 	github.com/prometheus/common v0.53.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/quic-go/quic-go v0.42.0 // indirect
+	github.com/stretchr/testify v1.8.4 // indirect
 	go.uber.org/mock v0.4.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect

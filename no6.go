@@ -7,14 +7,18 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/pkg/nonwriter"
+	expirable_lru "github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/miekg/dns"
 )
+
+const transientTtlSec = 30
 
 var log = clog.NewWithPlugin("no6")
 
@@ -42,12 +46,14 @@ type No6 struct {
 
 	origins   *hashSet[string]
 	domains   *hashSet[string]
+	transient *expirable_lru.LRU[string, struct{}]
 }
 
 func New() *No6 {
 	s := &No6{
 		domains:   newHashSet[string](),
 		origins:   newHashSet[string](),
+		transient: expirable_lru.NewLRU[string, struct{}](2048, nil, time.Second*transientTtlSec),
 	}
 
 	return s
@@ -100,6 +106,10 @@ func (s *No6) shouldFilterQuestion(q dns.Question) bool {
 	trimmedName := strings.TrimSuffix(q.Name, ".")
 
 	if s.domains.Contains("?" + trimmedName) {
+		return true
+	}
+
+	if s.transient.Contains(trimmedName) {
 		return true
 	}
 
@@ -157,12 +167,21 @@ func (s *No6) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 		for i, ans := range r.Answer {
 			if _, ok := ans.(*dns.AAAA); ok {
 				v6 = true
+				filterAnswer := s.shouldFilterAnswer(ans)
 
-				if filterQuestion || s.shouldFilterAnswer(ans) {
+				if filterQuestion || filterAnswer {
 					remove = append(remove, i)
+
+					if filterQuestion && !filterAnswer {
+						s.transient.Add(strings.TrimSuffix(ans.Header().Name, "."), struct{}{})
+					}
 				}
 			} else if _, ok := ans.(*dns.A); ok {
 				v4 = true
+			} else if _, ok := ans.(*dns.CNAME); ok && filterQuestion {
+				if ans.Header().Ttl > transientTtlSec {
+					ans.Header().Ttl = transientTtlSec
+				}
 			}
 		}
 

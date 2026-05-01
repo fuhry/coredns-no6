@@ -85,7 +85,7 @@ func TestNo6Parse(t *testing.T) {
 
 func TestNo6Response(t *testing.T) {
 	no6 := New()
-	no6.domains.Add("six.example.com", ".ds.example.com", "?.question.com", "?q.com")
+	no6.domains.Add("six.example.com", ".ds.example.com", "?.question.com", "?q.com", "?.netflix.com")
 	no6.Next = &mockHandler{}
 
 	testCases := []test.Case{
@@ -171,7 +171,7 @@ func TestNo6Response(t *testing.T) {
 			Qtype: dns.TypeAAAA,
 			Rcode: dns.RcodeSuccess,
 			Answer: []dns.RR{
-				test.CNAME("sub.ds.question.com. 60 IN CNAME sub.ds.example.com."),
+				test.CNAME("sub.ds.question.com. 30 IN CNAME sub.ds.example.com."),
 			},
 			Extra: []dns.RR{
 				test.CNAME("sub.ds.question.com. 60 IN CNAME sub.ds.example.com."),
@@ -199,10 +199,21 @@ func TestNo6Response(t *testing.T) {
 			Qtype: dns.TypeAAAA,
 			Rcode: dns.RcodeSuccess,
 			Answer: []dns.RR{
-				test.CNAME("q.com. 60 IN CNAME a.com."),
+				test.CNAME("q.com. 30 IN CNAME a.com."),
 			},
 			Extra: []dns.RR{
 				test.CNAME("q.com. 60 IN CNAME a.com."),
+				test.AAAA("a.com. 60 IN AAAA ::1"),
+			},
+		},
+		{
+			// when a.com comes back as a cname answer values, that should result in a.com
+			// going in the transient block cache
+			Qname:  "a.com.",
+			Qtype:  dns.TypeAAAA,
+			Rcode:  dns.RcodeSuccess,
+			Answer: []dns.RR{},
+			Extra: []dns.RR{
 				test.AAAA("a.com. 60 IN AAAA ::1"),
 			},
 		},
