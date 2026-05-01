@@ -14,7 +14,6 @@ import (
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/pkg/nonwriter"
 	"github.com/miekg/dns"
-	"go.fuhry.dev/runtime/utils/hashset"
 )
 
 var log = clog.NewWithPlugin("no6")
@@ -41,14 +40,14 @@ func setup(c *caddy.Controller) error {
 type No6 struct {
 	Next plugin.Handler
 
-	origins *hashset.HashSet[string]
-	domains *hashset.HashSet[string]
+	origins   *hashSet[string]
+	domains   *hashSet[string]
 }
 
 func New() *No6 {
 	s := &No6{
-		domains: hashset.NewHashSet[string](),
-		origins: hashset.NewHashSet[string](),
+		domains:   newHashSet[string](),
+		origins:   newHashSet[string](),
 	}
 
 	return s

@@ -6,7 +6,6 @@ require (
 	github.com/coredns/caddy v1.1.1
 	github.com/coredns/coredns v1.11.3
 	github.com/miekg/dns v1.1.62
-	go.fuhry.dev/runtime v0.0.0-20240726163707-e899cf9bedbc
 )
 
 require (
